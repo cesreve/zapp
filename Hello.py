@@ -1,4 +1,6 @@
 import streamlit as st
+import psycopg2
+import os
 
 # Title of the app
 st.title("My First Streamlit App")
@@ -6,15 +8,14 @@ st.title("My First Streamlit App")
 # Display some text
 st.write("Hello, this is a basic Streamlit app!")
 
-# Input field for user's name
-name = st.text_input("Enter your name:")
+DATABASE_URL = st.secrets["my_database"]["DATABASE_URL"]
 
-# Display the name if entered
-if name:
-    st.write(f"Welcome, {name}!")
 
-# Slider for a numeric value
-number = st.slider("Select a number:", 0, 100)
-
-# Display the selected number
-st.write(f"You selected: {number}")
+st.write("Welcome, you're logged in!")
+conn = psycopg2.connect(DATABASE_URL)
+cur = conn.cursor()
+cur.execute("SELECT * FROM products;")
+data = cur.fetchall()
+cur.close()
+conn.close()
+st.dataframe(data)
