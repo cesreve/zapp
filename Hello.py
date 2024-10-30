@@ -1,6 +1,8 @@
 import streamlit as st
 import psycopg2
 import os
+from database import connect_to_db
+
 
 # Title of the app
 st.title("My First Streamlit App")
@@ -12,7 +14,8 @@ DATABASE_URL = st.secrets["my_database"]["DATABASE_URL"]
 
 
 st.write("Welcome, you're logged in!")
-conn = psycopg2.connect(DATABASE_URL)
+
+conn = connect_to_db()
 cur = conn.cursor()
 cur.execute("SELECT * FROM products;")
 data = cur.fetchall()
