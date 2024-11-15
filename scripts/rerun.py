@@ -1,11 +1,10 @@
 import streamlit as st
 
-if "value" not in st.session_state:
-    st.session_state.value = "Title"
+def callback():
+  """This function will be called when the text input changes."""
+  st.write(st.session_state.my_input)
 
-##### Option using st.rerun #####
-st.header(st.session_state.value)
+st.title("`on_change` Argument Example")
 
-if st.button("Foo"):
-    st.session_state.value = "Foo"
-    #st.rerun()
+st.write("Type something in the text input below:")
+st.text_input("My Input", key="my_input", on_change=callback)
