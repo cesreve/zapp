@@ -33,22 +33,25 @@ def create_user(username, password):
     except psycopg2.Error as e:
         st.error(f"Database error: {e}")
 
-def authenticate(username, password):
+def authenticate():
     """Authenticates the user against the PostgreSQL database."""
-    if len(username) == 0 or len(password) == 0:
+    if len(st.session_state.username) == 0 or len(st.session_state.password) == 0:
         st.error("Username and password must be at least one character long.")
         return False
     try:
         with psycopg2.connect(DATABASE_URL) as conn:
             with conn.cursor() as cur:
-                cur.execute("SELECT password FROM users WHERE username = %s", (username,))
+                cur.execute("SELECT password FROM users WHERE username = %s", (st.session_state.username,))
                 user = cur.fetchone()
                 if user:
                     hashed_password = user[0]
-                    if check_hash(password, hashed_password):
+                    if check_hash(st.session_state.password, hashed_password):
                         st.session_state["authenticated"] = True
-                        st.session_state["username"] = username
+                        #st.session_state["username"] = username
+                        st.success("Connecté avec succès!")
                         return True
+                    else:
+                        st.error("Nom d'utilisateur ou mot de passe incorrect.")
                 return False
     except psycopg2.Error as e:
         st.error(f"Database error: {e}")

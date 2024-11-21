@@ -20,22 +20,24 @@ with st.sidebar:
         st.session_state.authenticated = False
 
     if not st.session_state.authenticated:
-        username = st.text_input("Nom d'utilisateur")
-        password = st.text_input("Mot de passe", type="password")
+        username = st.text_input("Nom d'utilisateur", key="username")
+        password = st.text_input("Mot de passe", type="password", key="password", on_change=authenticate)
         col1, col2 = st.columns(2)
         with col1:
             if st.button("Connexion"):
-                if authenticate(username, password):
-                    st.success("Connecté avec succès!")
+                if authenticate():
+                    #st.success("Connecté avec succès!")
                     st.session_state.authenticated = True
                     st.rerun()
                 else:
-                    st.error("Nom d'utilisateur ou mot de passe incorrect.")
-        # with col2:
-        #     if st.button("Créer"):
-        #         create_user(username, password)
+                    st.session_state.authenticated = True
+                    #st.error("Nom d'utilisateur ou mot de passe incorrect.")
+        with col2:
+            if st.button("Créer"):
+                create_user(st.session_state.username, st.session_state.password)
     else:
-        st.write(f"Bienvenue, {st.session_state.username}!")
+        if 'username' in st.session_state:
+            st.write(f"Bienvenue, {st.session_state.username}!")
         if st.button("Déconnexion"):
             st.session_state.authenticated = False
             st.rerun()  # Rerun to show login screen
