@@ -1,9 +1,6 @@
-import streamlit as st
-import psycopg2
+import duckdb
 import hashlib
-
-# Database connection details (replace with your actual values)
-DATABASE_URL = st.secrets["my_database"]["DATABASE_URL"]
+import streamlit as st
 
 def generate_hash(password):
     """Hashes the password using SHA-256."""
@@ -14,45 +11,63 @@ def check_hash(password, hashed_text):
     return generate_hash(password) == hashed_text
 
 def create_user(username, password):
-    """Creates a new user in the PostgreSQL database."""
+    """Creates a new user in the DuckDB database."""
     if len(username) == 0 or len(password) == 0:
         st.error("Username and password must be at least one character long.")
         return
     try:
-        with psycopg2.connect(DATABASE_URL) as conn:
-            with conn.cursor() as cur:
-                cur.execute("SELECT 1 FROM users WHERE username = %s", (username,))
-                existing_user = cur.fetchone()
-                if existing_user:
-                    st.error("This username already exists.")
-                else:
-                    hashed_password = generate_hash(password)
-                    cur.execute("INSERT INTO users (username, password) VALUES (%s, %s)", (username, hashed_password))
-                    conn.commit()
-                    st.success("User created successfully!")
-    except psycopg2.Error as e:
+        conn = duckdb.connect('app.db')  # Connect to the DuckDB database file
+        cur = conn.cursor()
+
+        cur.execute("SELECT 1 FROM users WHERE username = ?", (username,))
+        existing_user = cur.fetchone()
+        if existing_user:
+            st.error("This username already exists.")
+        else:
+            hashed_password = generate_hash(password)
+            cur.execute("INSERT INTO users (username, password) VALUES (?, ?)", (username, hashed_password))
+            conn.commit()
+            st.success("User created successfully!")
+
+    except Exception as e:  # Use a more general exception for DuckDB
         st.error(f"Database error: {e}")
+    finally:
+        if conn:
+            cur.close()
+            conn.close()
 
 def authenticate():
-    """Authenticates the user against the PostgreSQL database."""
-    if len(st.session_state.username) == 0 or len(st.session_state.password) == 0:
+    """Authenticates the user against the DuckDB database."""
+    username = st.session_state.get("username")  # Safely access session state
+    password = st.session_state.get("password")
+
+    if not username or not password:
         st.error("Username and password must be at least one character long.")
         return False
+
     try:
-        with psycopg2.connect(DATABASE_URL) as conn:
-            with conn.cursor() as cur:
-                cur.execute("SELECT password FROM users WHERE username = %s", (st.session_state.username,))
-                user = cur.fetchone()
-                if user:
-                    hashed_password = user[0]
-                    if check_hash(st.session_state.password, hashed_password):
-                        st.session_state["authenticated"] = True
-                        #st.session_state["username"] = username
-                        st.success("Connecté avec succès!")
-                        return True
-                    else:
-                        st.error("Nom d'utilisateur ou mot de passe incorrect.")
-                return False
-    except psycopg2.Error as e:
+        conn = duckdb.connect('app.db')
+        cur = conn.cursor()
+        cur.execute("SELECT password FROM users WHERE username = ?", (username,))
+        user = cur.fetchone()
+
+        if user:
+            hashed_password = user[0]
+            if check_hash(password, hashed_password):
+                st.session_state["authenticated"] = True
+                st.success("Logged in successfully!") # Changed to English for consistency
+                return True
+            else:
+                st.error("Incorrect username or password.")
+        else:
+            st.error("Incorrect username or password.")  # User not found
+        return False  # Explicitly return False if authentication fails
+
+    except Exception as e:
         st.error(f"Database error: {e}")
         return False
+
+    finally:
+        if conn:  # Ensure connection is closed in all cases
+            cur.close()
+            conn.close()
